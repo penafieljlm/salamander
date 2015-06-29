@@ -3,7 +3,7 @@ A minimalistic ruby web crawling framework.
 
 ## Usage
 To use Salamander, all you need to do is call the Salamander::crawl method, like so:
-```
+```ruby
 require 'slmndr'
 
 # list of URLs to start from
