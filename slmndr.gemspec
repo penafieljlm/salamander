@@ -9,4 +9,6 @@ Gem::Specification.new do |s|
   s.files       = ["lib/slmndr.rb"]
   s.homepage    = 'http://rubygems.org/gems/slmndr'
   s.license     = 'MIT'
+  s.cert_chain  = ['certs/penafieljlm.pem']
+  s.signing_key = File.expand_path("~/.ssh/gem-private_key.pem") if $0 =~ /gem\z/
 end
