@@ -8,4 +8,5 @@ Gem::Specification.new do |s|
   s.email       = 'penafieljlm@gmail.com'
   s.files       = ["lib/slmndr.rb"]
   s.homepage    = 'http://rubygems.org/gems/slmndr'
+  s.license     = 'MIT'
 end
