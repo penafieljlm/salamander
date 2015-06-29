@@ -36,7 +36,7 @@ end
 To use a proxy, simply set your HTTP_PROXY and HTTPS_PROXY environment variables.
 
 ## Author(s)
-* John Lawrence M. Penafiel
+* John Lawrence M. Penafiel (penafieljlm)
 
 ## Homepage
 * https://rubygems.org/gems/slmndr
