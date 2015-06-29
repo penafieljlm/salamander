@@ -1,6 +1,12 @@
 # Salamander
 A minimalistic ruby web crawling framework.
 
+## Installation
+To install Salamander, simple invoke the following command on your console:
+```
+gem install slmndr
+```
+
 ## Usage
 To use Salamander, all you need to do is call the Salamander::crawl method, like so:
 ```ruby
@@ -31,3 +37,6 @@ To use a proxy, simply set your HTTP_PROXY and HTTPS_PROXY environment variables
 
 ## Author(s)
 * John Lawrence M. Penafiel
+
+## Homepage
+* https://rubygems.org/gems/slmndr
