@@ -27,7 +27,7 @@ end
 ```
 
 ### Proxy
-To use a proxy, simple set your HTTP_PROXY and HTTPS_PROXY environment variables to your desired proxy server.
+To use a proxy, simply set your HTTP_PROXY and HTTPS_PROXY environment variables.
 
 ## Author(s)
 * John Lawrence M. Penafiel
