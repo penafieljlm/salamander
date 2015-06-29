@@ -1,5 +1,5 @@
-## Salamander: A minimalistic ruby web crawling framework.
-## Authored by: John Lawrence M. Penafiel
+# Salamander: A minimalistic ruby web crawling framework.
+# Authored by: John Lawrence M. Penafiel
 
 require 'time'
 require 'thread'
@@ -12,21 +12,12 @@ require 'open_uri_redirections'
 require 'nokogiri'
 require 'addressable/uri'
 
-## Module
-##     Salamander
-## Description
-##     The Crawler module provides an easy way for the other components of the Salamander system to perform crawling.
-## Functions
-##     Salamander::crawl
+# The module containing the Salamander framework itself.
 module Salamander
 
-	## Function
-	##     get_links
-	## Description
-	##     Extracts outgoing links from the HTML pointed to by the given URL string.
-	## Parameters
-	##     url		-	The URL of the HTML page the function is extracting links from.
-	##     html		-	The HTML data to extract links from.
+	# Extracts outgoing links from the HTML pointed to by the given URL string.
+	# @param url The URL of the HTML page the function is extracting links from.
+	# @param html The HTML data to extract links from.
 	def self.get_links(url, html)
 		# Initialize
 		uri = Addressable::URI.parse(url)
@@ -63,18 +54,15 @@ module Salamander
 		end
 	end
 	
-	## Function
-	##     crawl
-	## Description
-	##     Performs a restricted, unauthenticated, breadth-first crawl of the target web asset.
-	##     Function blocks until all threads terminate.
-	## Parameters
-	##     urls		-	Required. A list of strings containing the seed URLs.
-	##     args		-	Optional. Default: {}. A hash containing optional arguments for the function.
-	##         visit	-	Optional. Default: nil. A lambda which accepts a URL, and returns a boolean which tells the crawler if the URL should be visited.
-	##         delay	-	Optional. Default: 1. A positive float indicating the number of seconds between requests in one thread.
-	##         threads  -	Optional. Default: 1. A positive integer indicating the number of allowed simultaneous requests to the target web asset.
-	##         agent	-	Optional. Default: "Mozilla/5.0 (MSIE 9.0; Windows NT 6.1; Trident/5.0)". The user-agent string to be used.
+	# Performs a restricted, unauthenticated, breadth-first crawl of the target web asset.
+	# Function blocks until all threads terminate.
+	# Optional Arguments (Place these inside the 'args' hash)
+	#     visit:   A lambda which accepts a URL, and returns a boolean which tells the crawler if the URL should be visited.
+	#     delay:   A positive float indicating the number of seconds between requests in one thread. Defaults to 1.
+	#     threads: A positive integer indicating the number of allowed simultaneous requests to the target web asset. Defaults to 1.
+	#     agent:   The user-agent string to be used. Defaults to "Mozilla/5.0 (MSIE 9.0; Windows NT 6.1; Trident/5.0)".
+	# @param urls A list of strings containing the seed URLs.
+	# @param args A hash containing optional arguments for the function.
 	def crawl(urls, args = {})
 		# Get arguments
 		visit = nil
