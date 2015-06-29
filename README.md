@@ -2,7 +2,7 @@
 A minimalistic ruby web crawling framework.
 
 ## Installation
-To install Salamander, simple invoke the following command on your console:
+To install Salamander, simply invoke the following command on your console:
 ```
 gem install slmndr
 ```
