@@ -54,7 +54,7 @@ module Salamander
 		end
 	end
 	
-	# Performs a restricted, unauthenticated, breadth-first crawl of the target web asset.
+	# Performs an unauthenticated, breadth-first crawl of the target web asset.
 	# Function blocks until all threads terminate.
 	# This function can receive a code block like so...
 	#     Salamander::crawl(urls, args) do |request, response, depth|
