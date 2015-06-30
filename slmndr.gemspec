@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'slmndr'
-  s.version     = '0.0.2'
+  s.version     = '0.0.3'
   s.date        = '2015-06-30'
   s.summary     = "Salamander"
   s.description = "A minimalistic ruby web crawling framework.\nSee https://github.com/penafieljlm/slmndr for more information."

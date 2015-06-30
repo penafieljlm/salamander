@@ -56,11 +56,26 @@ module Salamander
 	
 	# Performs a restricted, unauthenticated, breadth-first crawl of the target web asset.
 	# Function blocks until all threads terminate.
-	# Optional Arguments (Place these inside the 'args' hash)
-	#     visit:   A lambda which accepts a URL, and returns a boolean which tells the crawler if the URL should be visited.
-	#     delay:   A positive float indicating the number of seconds between requests in one thread. Defaults to 1.
-	#     threads: A positive integer indicating the number of allowed simultaneous requests to the target web asset. Defaults to 1.
-	#     agent:   The user-agent string to be used. Defaults to "Mozilla/5.0 (MSIE 9.0; Windows NT 6.1; Trident/5.0)".
+	# This function can receive a code block like so...
+	#     Salamander::crawl(urls, args) do |request, response, depth|
+	#          # request: the URL string used to request the current page
+    #          # response: a hash containing data pertaining to the response to the requested URL
+    #          # depth: a positive integer indicating the breadth/depth of the current page, relative to one of the seed URLs
+	#     end
+	# Response Hash Contents
+	#     base_uri:         The base_uri field of OpenURI's response
+	#     meta:             The meta field of OpenURI's response
+	#     status:           The status field of OpenURI's response
+	#     content_type:     The content_type field of OpenURI's response
+	#     charset:          The charset field of OpenURI's response
+	#     content_encoding: The content_encoding field of OpenURI's response
+	#     last_modified:    The last_modified field of OpenURI's response
+	#     body:             Contains the body of OpenURI's response
+	# Optional Arguments
+	#     visit:            A lambda which accepts a URL, and returns a boolean which tells the crawler if the URL should be visited.
+	#     delay:            A positive float indicating the number of seconds between requests in one thread. Defaults to 1.
+	#     threads:          A positive integer indicating the number of allowed simultaneous requests to the target web asset. Defaults to 1.
+	#     agent:            The user-agent string to be used. Defaults to "Mozilla/5.0 (MSIE 9.0; Windows NT 6.1; Trident/5.0)".
 	# @param urls A list of strings containing the seed URLs.
 	# @param args A hash containing optional arguments for the function.
 	def crawl(urls, args = {})
@@ -134,21 +149,31 @@ module Salamander
 					# Get all links in page pointed to by job URL
 					begin
 						open("#{job_url}", { :allow_redirections => :all, ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE, "User-Agent" => agent }) do |response|
+							_response = {
+								base_uri: response.base_uri,
+								meta: response.meta,
+								status: response.status,
+								content_type: response.content_type,
+								charset: response.charset,
+								content_encoding: response.content_encoding,
+								last_modified: response.last_modified,
+								body: response.read
+							}
 							# Callback
 							jlock.synchronize do
-								yield "#{job_url}", response, job_depth
+								yield "#{job_url}", _response, job_depth
 							end
 							# If resolved URL is in scope
 							if Addressable::URI.parse(response.base_uri).host == Addressable::URI.parse("#{job_url}").host then
 								# Add resolved URL to job queue and mark it as complete if it does not exist yet
 								jlock.synchronize do
 									if jobs[:"#{response.base_uri}"] == nil then
-										yield "#{response.base_uri}", response, job_depth
+										yield "#{response.base_uri}", _response, job_depth
 										jobs[:"#{response.base_uri}"] = { state: 2, depth: job_depth }
 									end
 								end
 								# Get links for resolve URL
-								Salamander::get_links(response.base_uri, response) do |link|
+								Salamander::get_links(response.base_uri, _response[:body]) do |link|
 									# Determine if the link should be visited
 									if visit.nil? || visit.call(link) then
 										jlock.synchronize do
@@ -291,7 +316,7 @@ if __FILE__ == $0 then
 					end
 				end
 			rescue => e
-				puts JSON.pretty_generate({ result: "exception", message: "error encountered while crawling", inspect: e.inspect })
+				puts JSON.pretty_generate({ result: "exception", message: "error encountered while crawling", backtrace: e.backtrace })
 				exit
 			end
 		end
@@ -304,7 +329,7 @@ if __FILE__ == $0 then
 		STDERR.puts " Running Time: #{Time.at(Time.new - time).gmtime.strftime("%H:%M:%S")}"
 	rescue e
 		# Print any uncaught exceptions
-		puts JSON.pretty_generate({ result: "exception", message: "unknown error", inspect: e.inspect })
+		puts JSON.pretty_generate({ result: "exception", message: "unknown error", backtrace: e.backtrace })
 		exit
 	end
 end
