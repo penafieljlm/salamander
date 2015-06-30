@@ -59,8 +59,8 @@ module Salamander
 	# This function can receive a code block like so...
 	#     Salamander::crawl(urls, args) do |request, response, depth|
 	#          # request: the URL string used to request the current page
-    #          # response: a hash containing data pertaining to the response to the requested URL
-    #          # depth: a positive integer indicating the breadth/depth of the current page, relative to one of the seed URLs
+	#          # response: a hash containing data pertaining to the response to the requested URL
+	#          # depth: a positive integer indicating the breadth/depth of the current page, relative to one of the seed URLs
 	#     end
 	# Response Hash Contents
 	#     base_uri:         The base_uri field of OpenURI's response
