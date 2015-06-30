@@ -36,7 +36,6 @@ Salamander::crawl(urls, args) do |request, response, depth|
 	#     last_modified:    The last_modified field of OpenURI's response
 	#     body:             Contains the body of OpenURI's response
 	# depth:    a positive integer indicating the breadth/depth of the current page, relative to one of the seed URLs
-	
 	puts "Just visited #{request}"
 end
 ```
