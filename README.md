@@ -25,9 +25,18 @@ args = {
 }
 # call the crawl method
 Salamander::crawl(urls, args) do |request, response, depth|
-	# request - the URL used to request the current page
-	# response - an OpenURI HTTP response object representing the content of the requested URL
-	# depth - a positive integer indicating the breadth/depth of the current page, relative to one of the seed URLs
+	# request:  the URL string used to request the current page
+	# response: a hash containing data pertaining to the response to the requested URL
+	#     base_uri:         The base_uri field of OpenURI's response
+	#     meta:             The meta field of OpenURI's response
+	#     status:           The status field of OpenURI's response
+	#     content_type:     The content_type field of OpenURI's response
+	#     charset:          The charset field of OpenURI's response
+	#     content_encoding: The content_encoding field of OpenURI's response
+	#     last_modified:    The last_modified field of OpenURI's response
+	#     body:             Contains the body of OpenURI's response
+	# depth:    a positive integer indicating the breadth/depth of the current page, relative to one of the seed URLs
+	
 	puts "Just visited #{request}"
 end
 ```
