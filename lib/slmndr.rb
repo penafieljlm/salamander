@@ -102,106 +102,154 @@ module Salamander
 		if args[:agent] != nil then
 			agent = args[:agent]
 		end
-		# Create threads list
-		_threads = []
+		# Create threads list and lock
+		_threads = {}
+		tlock = Mutex.new
 		# Create jobs map and lock
 		jobs = {}
 		jlock = Mutex.new
+		# Create yield job list and lock
+		yields = []
+		ylock = Mutex.new
 		# Create job; Job States: 0: waiting, 1: working, 2: done
 		urls.each do |url|
 			jobs[:"#{url}"] = { state: 0, depth: 0 }
 		end
 		# Create and launch crawl threads
-		for id in 1..threads
-			# Create crawl thread
-			thread = Thread.new do
-				# Loop
-				while true
-					# Find job to do
-					kill = true
-					job_url = nil
-					jlock.synchronize do
-						# For each job
-						jobs.each do |u, j|
-							# If job is waiting
-							if j[:state] == 0 then
-								# Take job
-								job_url = u
-								j[:state] = 1
-								kill = false
-								break
-							elsif j[:state] == 1 then
-								# Some jobs are still working; anticipate more jobs in the future
-								kill = false
+		for i in 1..threads
+			tlock.synchronize do
+				# Create crawl thread
+				thread = Thread.new do
+					# Wait until all threads are created
+					tlock.synchronize do
+					end
+					# Get thread id
+					_id = Thread.current.object_id
+					# Loop
+					while true
+						# Check if thread has been forcefully killed
+						kill = false
+						tlock.synchronize do
+							kill = _threads[_id][:kill]
+						end
+						if kill then
+							break
+						end
+						# Find job to do
+						kill = true
+						job_url = nil
+						jlock.synchronize do
+							# For each job
+							jobs.each do |u, j|
+								# If job is waiting
+								if j[:state] == 0 then
+									# Take job
+									job_url = u
+									j[:state] = 1
+									kill = false
+									break
+								elsif j[:state] == 1 then
+									# Some jobs are still working; anticipate more jobs in the future
+									kill = false
+								end
 							end
 						end
-					end
-					# If all jobs are done, and no job is found
-					if kill then
-						break
-					end
-					# If no job found but some jobs are still being worked on, skip
-					if job_url == nil then
-						next
-					end
-					# Get job depth
-					job_depth = jobs[:"#{job_url}"][:depth]
-					# Get all links in page pointed to by job URL
-					begin
-						open("#{job_url}", { :allow_redirections => :all, ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE, "User-Agent" => agent }) do |response|
-							_response = {
-								base_uri: response.base_uri,
-								meta: response.meta,
-								status: response.status,
-								content_type: response.content_type,
-								charset: response.charset,
-								content_encoding: response.content_encoding,
-								last_modified: response.last_modified,
-								body: response.read
-							}
-							# Callback
-							jlock.synchronize do
-								yield "#{job_url}", _response, job_depth
-							end
-							# If resolved URL is in scope
-							if Addressable::URI.parse(response.base_uri).host == Addressable::URI.parse("#{job_url}").host then
-								# Add resolved URL to job queue and mark it as complete if it does not exist yet
-								jlock.synchronize do
-									if jobs[:"#{response.base_uri}"] == nil then
-										yield "#{response.base_uri}", _response, job_depth
-										jobs[:"#{response.base_uri}"] = { state: 2, depth: job_depth }
-									end
+						# If all jobs are done, and no job is found
+						if kill then
+							break
+						end
+						# If no job found but some jobs are still being worked on, skip
+						if job_url == nil then
+							next
+						end
+						# Get job depth
+						job_depth = jobs[:"#{job_url}"][:depth]
+						# Get all links in page pointed to by job URL
+						begin
+							open("#{job_url}", { :allow_redirections => :all, ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE, "User-Agent" => agent }) do |response|
+								_response = {
+									base_uri: response.base_uri,
+									meta: response.meta,
+									status: response.status,
+									content_type: response.content_type,
+									charset: response.charset,
+									content_encoding: response.content_encoding,
+									last_modified: response.last_modified,
+									body: response.read
+								}
+								# Callback
+								ylock.synchronize do
+									yields << { request: "#{job_url}", response: _response, depth: job_depth }
 								end
-								# Get links for resolve URL
-								Salamander::get_links(response.base_uri, _response[:body]) do |link|
-									# Determine if the link should be visited
-									if visit.nil? || visit.call(link) then
-										jlock.synchronize do
-											# If link is not in job queue
-											if jobs[:"#{link}"] == nil then
-												# Create job for the given link
-												jobs[:"#{link}"] = { state: 0, depth: job_depth + 1 }
+								# If resolved URL is in scope
+								if Addressable::URI.parse(response.base_uri).host == Addressable::URI.parse("#{job_url}").host then
+									# Add resolved URL to job queue and mark it as complete if it does not exist yet
+									jlock.synchronize do
+										if jobs[:"#{response.base_uri}"] == nil then
+											jobs[:"#{response.base_uri}"] = { state: 2, depth: job_depth }
+										end
+									end
+									# Get links for resolve URL
+									Salamander::get_links(response.base_uri, _response[:body]) do |link|
+										# Determine if the link should be visited
+										if visit.nil? || visit.call(link) then
+											jlock.synchronize do
+												# If link is not in job queue
+												if jobs[:"#{link}"] == nil then
+													# Create job for the given link
+													jobs[:"#{link}"] = { state: 0, depth: job_depth + 1 }
+												end
 											end
 										end
 									end
 								end
 							end
+						rescue
 						end
-					rescue
+						# Flag job as complete
+						jlock.synchronize do
+							jobs[:"#{job_url}"][:state] = 2
+						end
+						# Perform delay
+						sleep(delay)
 					end
-					# Flag job as complete
-					jlock.synchronize do
-						jobs[:"#{job_url}"][:state] = 2
-					end
-					# Perform delay
-					sleep(delay)
 				end
+				_threads[thread.object_id] = { thread: thread, kill: false }
 			end
-			_threads << thread
 		end
 		# Wait for all threads to die
-		_threads.each do |_thread|
-			_thread.join
+		while true
+			# Execute yields
+			y = nil
+			ylock.synchronize do
+				y = yields.shift
+			end
+			if y != nil then
+				tlock.synchronize do
+					# Pre-emptive kill if yield breaks
+					_threads.each do |id, _thread|
+						_thread[:kill] = true
+					end
+					# Yield
+					yield y[:request], y[:response], y[:depth]
+					# Cancel kill if yield does not break
+					_threads.each do |id, _thread|
+						_thread[:kill] = false
+					end
+				end
+				next
+			end
+			# Check if dead
+			alive = false
+			_threads.each do |id, _thread|
+				alive = alive || _thread[:thread].alive?
+				if alive then
+					break
+				end
+			end
+			if !alive then
+				break
+			end
 		end
 	end
 	
@@ -239,6 +287,10 @@ if __FILE__ == $0 then
 				puts JSON.pretty_generate({ result: "exception", message: "urls must be a list of valid URLs" })
 				exit
 			end
+			urls_hosts = Set.new
+			urls.each do |url|
+				urls_hosts << Addressable::URI.parse(url).host
+			end
 			urls.each do |url|
 				begin
 					Addressable::URI.parse(url)
@@ -247,7 +299,11 @@ if __FILE__ == $0 then
 					exit
 				end
 			end
-			_args = {}
+			_args = { visit:
+				lambda do |url|
+					return urls_hosts.include?(Addressable::URI.parse(url).host)
+				end
+			}
 			# Attempt to retrieve the delay parameter
 			if args['delay'] != nil then
 				begin
@@ -277,6 +333,7 @@ if __FILE__ == $0 then
 				STDERR.puts " Welcome to the Salamander Web Crawler Demo!"
 				STDERR.puts
 				STDERR.puts " This is a command-line demonstration of the Salamander Web Crawler in action."
+				STDERR.puts " The crawl is restricted to the hosts inside the URL list that was provided."
 				STDERR.puts " Press Ctrl+C at any time to interrupt the crawl."
 				STDERR.puts
 				STDERR.puts " Starting crawl at the following URLs:"
